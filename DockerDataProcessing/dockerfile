@@ -1,0 +1,28 @@
+FROM python:3.9.16
+
+# creates this dir inside the container
+WORKDIR /app
+
+RUN pip install pandas==1.3.5
+
+# or can use ADD
+COPY py_script.py .
+
+ENV INPUT_DIR='/app/input'
+ENV OUTPUT_DIR='/app/output'
+
+# mounts local file system to container. Not needed
+#VOLUME /app/input
+#VOLUME /app/output
+
+# ensures container runs forever. Listens to the null file pinging it ongoing.
+CMD tail -f /dev/null
+
+# run the following command in docker exec to run the python script. python3:
+# docker exec -it <docker image id> python3 <python script file name>
+
+# series of commands to build and run image
+# docker docker build -t climate-image .
+# docker run -d -v /home/hn/WCDAssignments/DockerDataProcessing/output/:/app/output -v /home/hn/WCDAssignments/DockerDataProcessing/input/:/app/input --name mycontainer climate-image
+# docker exec -it <container id> /bin/bash 
+# docker exec -it <container id> python3 py-script.py
