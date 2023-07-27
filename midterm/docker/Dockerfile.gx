@@ -1,0 +1,28 @@
+# followed this GX video to create: https://www.youtube.com/watch?v=hhRxZ8M5VdI
+# to build use: docker build -f Dockerfile.gx . -t gx/gxdemo:local
+# then: docker run -it -v $(pwd):/app -p 8888:8888 gx/gxdemo:local
+# get bash shell in container: docker exec -it <container_id> bash
+FROM ubuntu:22.04
+LABEL author="hn"
+
+#requirements
+RUN apt-get update -y && \
+    apt install software-properties-common -y && \
+    apt-get install python3 python3-pip -y && \
+    python3 -m pip install --upgrade pip
+
+#install GX
+RUN pip3 install great_expectations
+
+# for snowflake connector install
+RUN pip3 install sqlalchemy
+RUN pip3 install snowflake-connector-python
+RUN pip3 install snowflake-sqlalchemy
+
+# add work directory
+WORKDIR /app
+
+# open a jupyter notebook to edit the expectation suites
+CMD ["jupyter", "notebook", "--allow-root", "--port=8888", "--no-browser", "--ip=0.0.0.0"]
+
+### YAY
