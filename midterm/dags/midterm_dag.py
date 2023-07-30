@@ -14,7 +14,13 @@ from airflow.models.baseoperator import chain
 
 #CLUSTER_ID = "j-37VIMVICWVO8T"     # use this temporarily for debugging
 
-# this is just an example of how to use SPARK_STEPS, you need to define your own steps
+# variables to move to airflow xcom
+TRANSFORM_CODE_FILE = 's3://wcd-midterm-hn/artifact/wcd_midterm-transform_sales_inventory_data.py'
+BUCKET_NAME = 'wcd-midterm-hn'
+INPUT_BUCKET_PREFIX= 'input_from_trans_db'
+EMR_LOG_DIR = "s3://wcd-midterm-hn/emr-logs/"
+
+# create spark step to run EMR
 SPARK_STEPS = [
     {
         'Name': 'wcd_data_engineer',
@@ -26,15 +32,15 @@ SPARK_STEPS = [
                 #'--class', 'Driver.MainApp',
                 '--master', 'yarn',
                 '--deploy-mode', 'client',  # test in both client (for detailed logs) and cluster
-                # '--num-executors', '2',
+                #'--num-executors', '2',
                 # '--driver-memory', '512m',
                 # '--executor-memory', '3g',
                 # '--executor-cores', '2',
-                's3://wcd-midterm-hn/artifact/wcd_midterm-transform_sales_inventory_data.py',
+                TRANSFORM_CODE_FILE,
                 #"{{ airflow.macros.ds_format(ds, '%Y-%m-$d', '&Y-%m-%d') }}",
                 #'--spark_name', 'mid-term',
-                '--bucket_name', 'wcd-midterm-hn',
-                '--input_bucket_prefix', 'input_from_trans_db',
+                '--bucket_name', BUCKET_NAME,
+                '--input_bucket_prefix', INPUT_BUCKET_PREFIX,
                 #'--data', "{{task_instance.xcom_pull('parse_request', key='input_paths')}}",
                 '--input_date', "{{task_instance.xcom_pull('parse_request', key='input_files_date')}}",
                 '--output_bucket_prefix', 'output',
@@ -50,7 +56,7 @@ SPARK_STEPS = [
 # parameters for EMR cluster creation
 JOB_FLOW_OVERRIDES = {
     "Name": "wcd_midterm_cluster",
-    "LogUri":"s3://wcd-midterm-hn/emr-logs/",
+    "LogUri": EMR_LOG_DIR,
     "ReleaseLabel": "emr-6.10.0",
     "Applications": [{"Name": "Hadoop"}, {"Name": "Spark"}], # We want our EMR cluster to have HDFS and Spark
     "Configurations": [
@@ -88,6 +94,7 @@ JOB_FLOW_OVERRIDES = {
     "ServiceRole": "EMR_DefaultRole"
 }
 
+# default args for dag
 DEFAULT_ARGS = {
     'owner': 'wcd_data_engineer',
     'depends_on_past': False,
@@ -175,6 +182,7 @@ end_task = DummyOperator(
     dag=dag
 )
 
+# main linear path of dag operators
 chain(
     start_task,
     create_emr_cluster,
