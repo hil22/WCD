@@ -1,0 +1,60 @@
+# this file is used to read from dynamoDB and write to a .csv file stored on S3 
+# parameters to be passed in through event
+import boto3
+from boto3.dynamodb.conditions import Key
+from datetime import datetime
+from io import StringIO
+import csv
+
+table_name = 'dynamoClimateTable'
+
+def lambda_handler(event, context):
+    
+    # get the event vars
+    year = event['year']
+    start_date = event['start_date']
+    end_date = event['end_date']
+    s3_bucket = event['s3_bucket']
+    s3_key = event['s3_key']
+    
+    print("year = ",year, " start_date =", start_date," end_date =", end_date)
+    
+    # get a reference to the dynamoDB table
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table(table_name)
+    
+    # Define the query condition
+    query_condition = Key('year').eq(str(year)) & \
+                      Key('date').between(str(start_date), str(end_date))    
+
+    try:
+        # Perform the query using the query method
+        response = table.query(KeyConditionExpression=query_condition)
+    
+        # Print the queried items
+        items = response['Items']
+        print("# of items = ", len(items))
+        #for item in items:
+        #    print(item)
+
+        # Prepare CSV data
+        csv_data = StringIO()
+        csv_writer = csv.writer(csv_data)
+        
+        # Write header
+        csv_writer.writerow(items[0].keys())
+        
+        # Write data
+        for item in items:
+            csv_writer.writerow(item.values())
+        
+        # Upload CSV to S3
+        csv_data.seek(0)
+        s3_client = boto3.client('s3')
+        s3_client.put_object(Bucket=s3_bucket, Key=s3_key, Body=csv_data.read())
+    
+        print("CSV file saved to S3:", s3_key)
+
+    except Exception as e:
+        print("Error:", str(e))
+        return
